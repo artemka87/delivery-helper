@@ -32,7 +32,7 @@
 Нужен Python 3.10 или новее. Сторонние библиотеки не требуются.
 
 ```bash
-git clone https://github.com/<ваш-логин>/delivery-helper.git
+git clone https://github.com/artemka87/delivery-helper.git
 cd delivery-helper
 python main.py
 ```
@@ -75,4 +75,4 @@ delivery-helper/
 
 ## Автор
 
-Артём — начинающий Python-разработчик, изучаю ИИ и автоматизацию для логистики.
+Артём ([@artemka87](https://github.com/artemka87)) — начинающий Python-разработчик, изучаю ИИ и автоматизацию для логистики.
