@@ -77,7 +77,7 @@ delivery-helper/
 
 <img src="images/author_web.jpg" width="300" align="right" alt="Артём"/>
 
-**Артём** ([@artemka87](https://github.com/artemka87))
+**Артём** ([@artemka87](https://github.com/artemka87)) · Telegram: [@Mr_Kret](https://t.me/Mr_Kret)
 
 Начинающий Python-разработчик, изучаю искусственный интеллект и автоматизацию для логистики.
 
