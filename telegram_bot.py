@@ -27,6 +27,7 @@ from delivery_helper.calculator import (
     calculate_delivery,
     find_city,
 )
+from delivery_helper.natural_language import parse_delivery_request
 
 CITY, WEIGHT, TARIFF, NEXT_ACTION = range(4)
 NEW_CALCULATION: Final = "Новый расчёт"
@@ -103,10 +104,41 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["state"] = CITY
     await update.message.reply_text(
         "Привет! Я помогу рассчитать стоимость и срок доставки из Ростова-на-Дону.\n\n"
-        "Выбери город на клавиатуре или напиши его вручную.",
+        "Можно написать запрос целиком, например: «Сколько стоит отправить 3 кг в Сочи?»\n"
+        "Или выбери город на клавиатуре и пройди расчёт по шагам.",
         reply_markup=cities_keyboard(),
     )
     return CITY
+
+
+async def send_direct_result(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Считает доставку из полного текстового запроса."""
+    request = parse_delivery_request(update.message.text)
+    if request is None:
+        return ConversationHandler.END
+
+    try:
+        result = calculate_delivery(request.city, request.weight_kg, request.tariff)
+    except DeliveryError as error:
+        await update.message.reply_text(str(error))
+        return ConversationHandler.END
+
+    context.user_data.clear()
+    context.user_data["state"] = NEXT_ACTION
+    await update.message.reply_text(
+        format_result(result),
+        parse_mode="HTML",
+        reply_markup=next_action_keyboard(),
+    )
+    return NEXT_ACTION
+
+
+async def receive_city_or_direct(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обрабатывает полный запрос или продолжает обычный выбор города."""
+    request = parse_delivery_request(update.message.text)
+    if request is not None:
+        return await send_direct_result(update, context)
+    return await receive_city(update, context)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -118,6 +150,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "3. Укажи вес посылки в килограммах\n"
         "4. Выбери тариф\n\n"
         "Вес можно вводить с запятой: 2,5.\n"
+        "Можно также написать целиком: «Сколько стоит отправить 3 кг в Сочи?»\n"
         "Команда /cities покажет список городов.",
     )
 
@@ -247,9 +280,12 @@ def create_application(token: str) -> Application:
     """Создаёт приложение Telegram и регистрирует обработчики."""
     private_text = filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE
     conversation = ConversationHandler(
-        entry_points=[CommandHandler("start", start, filters=filters.ChatType.PRIVATE)],
+        entry_points=[
+            CommandHandler("start", start, filters=filters.ChatType.PRIVATE),
+            MessageHandler(private_text, send_direct_result),
+        ],
         states={
-            CITY: [MessageHandler(private_text, receive_city)],
+            CITY: [MessageHandler(private_text, receive_city_or_direct)],
             WEIGHT: [MessageHandler(private_text, receive_weight)],
             TARIFF: [MessageHandler(private_text, receive_tariff)],
             NEXT_ACTION: [MessageHandler(private_text, receive_next_action)],
